@@ -59,6 +59,21 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [lang, booted]);
 
+  useEffect(() => {
+    let resizeTimer = 0;
+    const onResize = () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 200);
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.clearTimeout(resizeTimer);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
+
   return (
     <div className="cyber-app">
       <div className="cyber-scanlines" aria-hidden="true" />

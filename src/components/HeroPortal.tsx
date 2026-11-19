@@ -32,11 +32,12 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
           const tl = gsap.timeline({
             scrollTrigger: {
               trigger: pinRef.current,
-              start: 'top top',
+              start: 'top 62px',
               end: '+=115%',
               pin: true,
               scrub: 0.65,
               anticipatePin: 1,
+              invalidateOnRefresh: true,
             },
           });
 
