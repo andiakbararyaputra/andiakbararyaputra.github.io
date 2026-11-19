@@ -119,8 +119,8 @@ export const UI_COPY = {
     tag: '/03 // SELECTED_WORK',
     title: { en: 'CURATED REPOSITORIES & RUNTIME VISUALS', id: 'REPOSITORI TERKURASI & VISUAL RUNTIME' },
     subtitle: {
-      en: '8 verified GitHub projects across Linux systems, full-stack web, mobile Flutter, distributed nodes, data science, and automata—paired with real runtime captures.',
-      id: '8 proyek nyata GitHub di bidang sistem Linux, web full-stack, mobile Flutter, sistem terdistribusi, data science, dan otomata lengkap dengan visual runtime aslinya.',
+      en: '9 verified GitHub projects across Linux systems, full-stack web, mobile Flutter, distributed nodes, data science, and automata—paired with real runtime captures.',
+      id: '9 proyek nyata GitHub di bidang sistem Linux, web full-stack, mobile Flutter, sistem terdistribusi, data science, dan otomata lengkap dengan visual runtime aslinya.',
     },
     flagshipTag: { en: 'FLAGSHIP_SHOWCASE // 01–03', id: 'SOROTAN_UTAMA // 01–03' },
     archiveTag: { en: 'ALL_REPOSITORIES // FILTERABLE_MATRIX', id: 'SELURUH_PROYEK // MATRIKS_FILTER' },
@@ -140,8 +140,8 @@ export const UI_COPY = {
       id: '"ARSITEKTUR YANG BAIK TERASA RINGAN SAAT DIJALANKAN; ANTARMUKA YANG HEBAT TERASA HIDUP SAAT DISENTUH."',
     },
     marquee: {
-      en: 'LET’S BUILD THE FUTURE TOGETHER  ★  8 CURATED REPOS  ★  HYPRLAND + LUA  ★  NEXT.JS + FASTIFY + FLUTTER  ★  OPEN FOR COLLABORATION  ★',
-      id: 'MARI BANGUN MASA DEPAN BERSAMA  ★  8 PROYEK KURASI  ★  HYPRLAND + LUA  ★  NEXT.JS + FASTIFY + FLUTTER  ★  TERBUKA UNTUK KOLABORASI  ★',
+      en: 'LET’S BUILD THE FUTURE TOGETHER  ★  9 CURATED REPOS  ★  HYPRLAND + LUA  ★  NEXT.JS + FASTIFY + FLUTTER  ★  OPEN FOR COLLABORATION  ★',
+      id: 'MARI BANGUN MASA DEPAN BERSAMA  ★  9 PROYEK KURASI  ★  HYPRLAND + LUA  ★  NEXT.JS + FASTIFY + FLUTTER  ★  TERBUKA UNTUK KOLABORASI  ★',
     },
   },
   systemHeader: {
@@ -504,11 +504,49 @@ export const PROJECTS: ProjectItem[] = [
     status: { en: 'TOOLKIT // JAVA_CLI', id: 'PERKAKAS // JAVA_CLI' },
     isRealProject: true,
   },
+  {
+    id: 'sifa-falak',
+    number: '09',
+    code: 'WEB // FALAK_PWA',
+    title: 'SIFA_FALAK',
+    group: 'web-ai',
+    category: {
+      en: 'INTEGRATED ISLAMIC ASTRONOMY PLATFORM',
+      id: 'SISTEM INFORMASI FALAK TERINTEGRASI',
+    },
+    tagline: {
+      en: 'Offline-first TypeScript PWA for spherical trigonometry Qibla compass, 10 prayer-time hisab criteria, OSM mosque map, and TV display mode.',
+      id: 'PWA TypeScript offline-first untuk hisab Arah Kiblat trigonometri bola, 10 kriteria waktu salat, peta masjid OSM, dan Layar Masjid.',
+    },
+    description: {
+      en: 'Collaborative PKM AIK IV monorepo (apps/web + packages/hisab-core) delivering transparent step-by-step astronomical hisab calculations, real-time MapLibre + OpenStreetMap Overpass mosque discovery, Takmir Qibla verification dashboard, and 20/20 Vitest test coverage.',
+      id: 'Monorepo kolaboratif PKM AIK IV (apps/web + packages/hisab-core) dengan panel transparansi hisab astronomis step-by-step, direktori & peta masjid MapLibre + OpenStreetMap Overpass, dashboard takmir, serta cakupan uji 20/20 Vitest.',
+    },
+    highlights: {
+      en: [
+        'Spherical trigonometry great-circle Qibla calculator with real-time animated compass and hisab derivation',
+        '10 selectable prayer-time calculation criteria (Muhammadiyah, Kemenag RI, MABIMS, NU, MWL, ISNA, etc.)',
+        'MapLibre GL + OSM Overpass mosque directory with responsive landscape Layar Masjid TV mode',
+        'Offline-first PWA monorepo verified with 20/20 Vitest tests (collaborator contribution)',
+      ],
+      id: [
+        'Kalkulator arah kiblat trigonometri segitiga bola dengan kompas animasi dan rincian rumus hisab',
+        '10 pilihan kriteria hisab jadwal salat (Muhammadiyah, Kemenag RI, MABIMS, NU, MWL, ISNA, dll.)',
+        'Peta direktori masjid MapLibre GL + OSM Overpass serta mode TV Layar Masjid otomatis lanskap',
+        'Monorepo PWA offline-first teruji 20/20 Vitest (proyek kontribusi kolaborator)',
+      ],
+    },
+    stack: ['TypeScript', 'Next.js', 'PWA', 'MapLibre', 'Vitest', 'hisab-core'],
+    image: '/images/repos/sifa-falak.png',
+    repoUrl: 'https://github.com/Muh-Asad-Habib/sistem_informasi_falak_terintegrasi',
+    status: { en: 'COLLABORATOR // PWA', id: 'KOLABORATOR // PWA' },
+    isRealProject: true,
+  },
 ];
 
 export const TELEMETRY_KPIS: TelemetryKpi[] = [
   {
-    value: 8,
+    value: 9,
     suffix: 'REPOS',
     label: { en: 'CURATED PROJECTS', id: 'PROYEK TERKURASI' },
   },
