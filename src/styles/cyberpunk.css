@@ -739,9 +739,77 @@ img {
 
 .projects-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
   padding: 28px;
+}
+
+.subbar-label {
+  padding: 12px 28px;
+  border-bottom: 1px solid var(--grid-line);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.03);
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--grid-line);
+  background: rgba(11, 13, 19, 0.65);
+}
+
+.filter-bar-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent-cyan);
+}
+
+.filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(16, 20, 31, 0.72);
+  color: var(--ink-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.filter-tab:hover {
+  border-color: var(--accent-volt);
+  color: var(--accent-volt);
+  transform: translateY(-1px);
+}
+
+.filter-tab.active {
+  background: var(--accent-volt);
+  color: #06070a;
+  border-color: var(--accent-volt);
+}
+
+.filter-tab .filter-count {
+  opacity: 0.78;
+  font-weight: 600;
 }
 
 .project-card {
@@ -900,6 +968,12 @@ img {
 }
 
 /* Responsive Breakpoints */
+@media (max-width: 1149px) {
+  .projects-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 1100px) {
   .principles-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -959,6 +1033,12 @@ img {
     border-left: none;
     border-top: 1px solid var(--grid-line);
   }
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 719px) {
   .projects-grid {
     grid-template-columns: 1fr;
   }

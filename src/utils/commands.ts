@@ -65,7 +65,7 @@ export function runCyberCommand(raw: string, ctx: CommandContext): CommandOutput
     case 'projects':
       return {
         lines: PROJECTS.map(
-          (p) => `[${p.number}] ${p.title.padEnd(13)} :: ${p.tagline[ctx.lang]} -> ${p.repoUrl}`,
+          (p) => `[${p.number}] ${p.title.padEnd(18)} :: ${p.tagline[ctx.lang]} -> ${p.repoUrl}`,
         ),
       };
 

@@ -1,20 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
 import { ArrowUpRight, ExternalLink, Plus, X } from 'lucide-react';
-import { Lang, PROJECTS, ProjectItem, UI_COPY } from '../data/portfolio';
+import { Lang, PROJECTS, ProjectGroup, ProjectItem, UI_COPY } from '../data/portfolio';
 import { cyberAudio } from '../utils/sound';
 
 interface SelectedWorkProps {
   lang: Lang;
 }
 
+const FILTER_ORDER: ProjectGroup[] = ['all', 'web-ai', 'systems-mobile', 'data-algo'];
+
 export function SelectedWork({ lang }: SelectedWorkProps) {
   const sectionRef = useRef<HTMLElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [activeGroup, setActiveGroup] = useState<ProjectGroup>('all');
   const [activeProject, setActiveProject] = useState<ProjectItem | null>(null);
   const header = UI_COPY.workHeader;
 
-  const flagships = PROJECTS.slice(0, 2);
+  const flagships = PROJECTS.filter((p) => p.featured);
+  const filteredProjects =
+    activeGroup === 'all'
+      ? PROJECTS
+      : PROJECTS.filter((p) => p.group === activeGroup);
+
+  const countForGroup = (g: ProjectGroup) =>
+    g === 'all' ? PROJECTS.length : PROJECTS.filter((p) => p.group === g).length;
 
   useEffect(() => {
     if (!activeProject) return;
@@ -65,33 +77,41 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
             );
           }
         });
-
-        // Differential column parallax on desktop 2-col grid
-        mm.add('(min-width: 901px)', () => {
-          gsap.utils.toArray<HTMLElement>('.project-card').forEach((card, i) => {
-            const isRightCol = i % 2 === 1;
-            gsap.fromTo(
-              card,
-              { y: isRightCol ? 36 : 0 },
-              {
-                y: isRightCol ? -24 : 0,
-                ease: 'none',
-                scrollTrigger: {
-                  trigger: '.projects-grid',
-                  start: 'top bottom',
-                  end: 'bottom top',
-                  scrub: true,
-                },
-              },
-            );
-          });
-        });
       });
 
       return () => mm.revert();
     },
     { scope: sectionRef, dependencies: [lang] },
   );
+
+  // Smooth GSAP card entrance & ScrollTrigger refresh on filter switch
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      ScrollTrigger.refresh();
+      return;
+    }
+
+    const cards = gridRef.current?.querySelectorAll('.project-card');
+    if (cards && cards.length > 0) {
+      gsap.fromTo(
+        cards,
+        { y: 16, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.35,
+          stagger: 0.05,
+          ease: 'power2.out',
+          clearProps: 'transform,opacity',
+        },
+      );
+    }
+
+    const timer = window.setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [activeGroup]);
 
   return (
     <section id="work" ref={sectionRef}>
@@ -103,7 +123,9 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
         <p className="section-subtitle">{header.subtitle[lang]}</p>
       </div>
 
-      {/* GTA VI-Inspired Alternating Split Flagship Showcase */}
+      {/* Flagship Split Showcase (Top 3 GTA-VI Style Parallax Cards) */}
+      <div className="subbar-label">{header.flagshipTag[lang]}</div>
+
       <div className="flagship-list">
         {flagships.map((project, idx) => (
           <article
@@ -212,7 +234,6 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                 alt={`${project.title} — ${project.category[lang]}`}
                 className="flagship-parallax-img"
               />
-              {/* Cyber HUD frame vignette + tag */}
               <div
                 style={{
                   position: 'absolute',
@@ -244,7 +265,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                     position: 'absolute',
                     right: '14px',
                     bottom: '14px',
-                    width: '132px',
+                    width: '142px',
                     border: '1px solid rgba(204,255,0,0.5)',
                     background: '#06070a',
                     overflow: 'hidden',
@@ -263,9 +284,37 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
         ))}
       </div>
 
-      {/* 4-Card Numbered Cyber-Brutalist Archive Grid */}
-      <div className="projects-grid">
-        {PROJECTS.map((project) => (
+      {/* Interactive Category Filter Bar */}
+      <div className="filter-bar">
+        <span className="filter-bar-label">{header.archiveTag[lang]}</span>
+        <div className="filter-tabs" role="tablist" aria-label="Filter repositories by category">
+          {FILTER_ORDER.map((groupKey) => {
+            const isActive = activeGroup === groupKey;
+            const count = String(countForGroup(groupKey)).padStart(2, '0');
+            return (
+              <button
+                key={groupKey}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`filter-tab chamfer-btn ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  cyberAudio.playClickBlip();
+                  setActiveGroup(groupKey);
+                }}
+                onMouseEnter={() => cyberAudio.playHoverTick()}
+              >
+                <span>{header.filters[groupKey][lang]}</span>
+                <span className="filter-count">[{count}]</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Filterable 8-Repository Cyber-Brutalist Archive Grid */}
+      <div ref={gridRef} className="projects-grid">
+        {filteredProjects.map((project) => (
           <article
             key={project.id}
             className="project-card hud-crosshair-box"
@@ -278,11 +327,11 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                   position: 'absolute',
                   top: '12px',
                   left: '12px',
-                  background: '#06070a',
+                  background: 'rgba(6, 7, 10, 0.9)',
                   border: '1px solid rgba(204,255,0,0.45)',
                   padding: '4px 9px',
                   fontFamily: 'var(--font-mono)',
-                  fontSize: '0.72rem',
+                  fontSize: '0.7rem',
                   fontWeight: 700,
                   color: 'var(--accent-volt)',
                 }}
@@ -293,19 +342,19 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
 
             <div
               style={{
-                padding: '20px 22px',
+                padding: '18px 20px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 flex: 1,
-                gap: '16px',
+                gap: '14px',
               }}
             >
               <div>
                 <div
                   style={{
                     fontFamily: 'var(--font-mono)',
-                    fontSize: '0.7rem',
+                    fontSize: '0.68rem',
                     color: 'var(--accent-cyan)',
                     letterSpacing: '0.08em',
                     marginBottom: '6px',
@@ -317,7 +366,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                   style={{
                     margin: '0 0 8px',
                     fontFamily: 'var(--font-display)',
-                    fontSize: '1.35rem',
+                    fontSize: '1.22rem',
                     fontWeight: 800,
                   }}
                 >
@@ -327,7 +376,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                   style={{
                     margin: 0,
                     color: 'var(--ink-secondary)',
-                    fontSize: '0.89rem',
+                    fontSize: '0.86rem',
                     lineHeight: 1.55,
                   }}
                 >
@@ -340,7 +389,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  paddingTop: '14px',
+                  paddingTop: '12px',
                   borderTop: '1px solid var(--grid-line)',
                 }}
               >
@@ -356,7 +405,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                     padding: 0,
                     color: 'var(--accent-volt)',
                     fontFamily: 'var(--font-mono)',
-                    fontSize: '0.76rem',
+                    fontSize: '0.74rem',
                     fontWeight: 700,
                     letterSpacing: '0.08em',
                     display: 'inline-flex',
@@ -465,7 +514,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                   border: '1px solid var(--grid-line)',
                   marginBottom: '20px',
                   overflow: 'hidden',
-                  maxHeight: '280px',
+                  maxHeight: '320px',
                 }}
               >
                 <img
