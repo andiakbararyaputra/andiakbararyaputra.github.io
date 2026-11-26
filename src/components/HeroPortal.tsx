@@ -1,23 +1,33 @@
 import { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { ArrowUpRight, Terminal } from 'lucide-react';
+import { ArrowUpRight, FileText, Terminal } from 'lucide-react';
 import { Lang, PROFILE, UI_COPY } from '../data/portfolio';
 import { useScrambleText } from '../hooks/useScrambleText';
 import { cyberAudio } from '../utils/sound';
+import { ThemePreset } from '../utils/preferences';
 import { WireframeCanvas } from './WireframeCanvas';
 
 interface HeroPortalProps {
   lang: Lang;
+  theme: ThemePreset;
   onOpenPalette: () => void;
+  onOpenResume: () => void;
   onScrollTo: (sectionId: string) => void;
 }
 
-export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps) {
+export function HeroPortal({
+  lang,
+  theme,
+  onOpenPalette,
+  onOpenResume,
+  onScrollTo,
+}: HeroPortalProps) {
   const pinRef = useRef<HTMLElement>(null);
   const layerOneRef = useRef<HTMLDivElement>(null);
   const layerTwoRef = useRef<HTMLDivElement>(null);
   const cobaltGlowRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
 
   const heroCopy = UI_COPY.hero;
   const voltWord = useScrambleText(heroCopy.titleVolt);
@@ -33,18 +43,23 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
             scrollTrigger: {
               trigger: pinRef.current,
               start: 'top 62px',
-              end: '+=115%',
+              end: '+=80%',
               pin: true,
-              scrub: 0.65,
+              scrub: 0.55,
               anticipatePin: 1,
               invalidateOnRefresh: true,
+              onUpdate: (self) => {
+                if (progressBarRef.current) {
+                  progressBarRef.current.style.transform = `scaleX(${self.progress})`;
+                }
+              },
             },
           });
 
           tl.to(
             layerOneRef.current,
             {
-              scale: 0.85,
+              scale: 0.88,
               yPercent: -4,
               autoAlpha: 0,
               ease: 'none',
@@ -54,7 +69,7 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
             .to(
               cobaltGlowRef.current,
               {
-                scale: 1.35,
+                scale: 1.3,
                 opacity: 0.85,
                 ease: 'none',
               },
@@ -64,7 +79,7 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
               layerTwoRef.current,
               {
                 autoAlpha: 0,
-                scale: 1.06,
+                scale: 1.05,
                 pointerEvents: 'none',
               },
               {
@@ -73,7 +88,7 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
                 pointerEvents: 'auto',
                 ease: 'power2.out',
               },
-              0.42,
+              0.38,
             );
         },
       );
@@ -87,7 +102,7 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
     <section id="hero" ref={pinRef} className="hero-pin-stage">
       <div ref={cobaltGlowRef} className="hero-ambient-cobalt" aria-hidden="true" />
 
-      {/* STAGE 1: Cyber-Brutalist Hero Composition */}
+      {/* STAGE 1: Hero Composition */}
       <div ref={layerOneRef} className="hero-layer-one">
         <div className="hero-left-col">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -121,7 +136,7 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
             </h1>
 
             <p className="hero-tagline">
-              <strong>{PROFILE.fullName}</strong> — {heroCopy.tagline[lang]}
+              <strong>{PROFILE.fullName}</strong>: {heroCopy.tagline[lang]}
             </p>
 
             <div id="hero-cta-sentinel" className="hero-action-row">
@@ -136,6 +151,19 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
               >
                 <span>{heroCopy.primaryCta[lang]}</span>
                 <ArrowUpRight size={16} strokeWidth={2.5} />
+              </button>
+
+              <button
+                type="button"
+                className="ghost-cta"
+                onClick={() => {
+                  cyberAudio.playClickBlip();
+                  onOpenResume();
+                }}
+                onMouseEnter={() => cyberAudio.playHoverTick()}
+              >
+                <FileText size={15} style={{ color: 'var(--accent-cyan)' }} />
+                <span>{heroCopy.cvCta[lang]}</span>
               </button>
 
               <button
@@ -168,8 +196,8 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
                     d="M 50, 50 m -36, 0 a 36,36 0 1,1 72,0 a 36,36 0 1,1 -72,0"
                   />
                 </defs>
-                <circle cx="50" cy="50" r="20" fill="none" stroke="rgba(204,255,0,0.4)" strokeWidth="1" />
-                <circle cx="50" cy="50" r="4" fill="#CCFF00" />
+                <circle cx="50" cy="50" r="20" fill="none" stroke="var(--grid-line-bright)" strokeWidth="1" />
+                <circle cx="50" cy="50" r="4" fill="var(--accent-volt)" />
                 <text
                   fill="#a2acc0"
                   fontSize="8.4"
@@ -177,7 +205,7 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
                   letterSpacing="2.1"
                 >
                   <textPath href="#stampCircle">
-                    SYSTEMS • ARCHITECTURE • KINETIC • WEB •
+                    LINUX * SYSTEMS * WEB * MOBILE *
                   </textPath>
                 </text>
               </svg>
@@ -211,15 +239,17 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
           </div>
         </div>
 
-        {/* Right HUD Frame: Generated Cybernetic Bust + Interactive Wireframe Canvas */}
+        {/* Right HUD Frame: Cyber Core Artwork + Theme-Synced Wireframe Canvas */}
         <div className="hero-right-col">
           <div className="hero-visual-frame hud-crosshair-box chamfer-card">
             <img
               src="/images/hero-cyber-core.jpg"
-              alt="Andi Akbar Arya Putra — Cybernetic HUD Core Artwork"
+              alt="Andi Akbar Arya Putra HUD Core Artwork"
+              decoding="async"
             />
+            <div className="hero-holo-scan" aria-hidden="true" />
 
-            <WireframeCanvas />
+            <WireframeCanvas theme={theme} />
 
             {/* Top-left HUD status */}
             <div
@@ -237,7 +267,7 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
                 padding: '5px 10px',
               }}
             >
-              &gt;RENDERING... 99.4%
+              &gt;NODE_MKS_08 // ONLINE
             </div>
 
             {/* Vertical SVG HUD Barcode on left */}
@@ -251,20 +281,20 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
                 left: '14px',
                 bottom: '44px',
                 zIndex: 4,
-                opacity: 0.75,
+                opacity: 0.78,
               }}
             >
-              <rect y="0" width="14" height="4" fill="#CCFF00" />
+              <rect y="0" width="14" height="4" fill="var(--accent-volt)" />
               <rect y="8" width="10" height="2" fill="#F4F6FA" />
               <rect y="14" width="14" height="6" fill="#F4F6FA" />
-              <rect y="24" width="8" height="2" fill="#00F0FF" />
+              <rect y="24" width="8" height="2" fill="var(--accent-cyan)" />
               <rect y="30" width="14" height="3" fill="#F4F6FA" />
               <rect y="37" width="12" height="8" fill="#F4F6FA" />
-              <rect y="49" width="14" height="2" fill="#CCFF00" />
+              <rect y="49" width="14" height="2" fill="var(--accent-volt)" />
               <rect y="55" width="9" height="5" fill="#F4F6FA" />
               <rect y="64" width="14" height="2" fill="#F4F6FA" />
               <rect y="70" width="14" height="10" fill="#F4F6FA" />
-              <rect y="84" width="14" height="4" fill="#CCFF00" />
+              <rect y="84" width="14" height="4" fill="var(--accent-volt)" />
             </svg>
 
             {/* Bottom-right Scene Tag */}
@@ -289,7 +319,7 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
         </div>
       </div>
 
-      {/* STAGE 2: GTA-VI Style Pinned Chapter Reveal (System Manifesto) */}
+      {/* STAGE 2: Pinned Chapter Reveal (System Overview) */}
       <div ref={layerTwoRef} className="hero-layer-two">
         <div className="manifesto-card hud-crosshair-box chamfer-card">
           <div
@@ -358,6 +388,11 @@ export function HeroPortal({ lang, onOpenPalette, onScrollTo }: HeroPortalProps)
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Desktop Pinned Scroll Progress Indicator */}
+      <div className="hero-progress-track" aria-hidden="true">
+        <div ref={progressBarRef} className="hero-progress-fill" />
       </div>
     </section>
   );

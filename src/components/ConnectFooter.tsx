@@ -1,14 +1,23 @@
-import { useEffect, useRef } from 'react';
-import { ArrowUpRight, Github, Linkedin, Mail } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowUpRight, Check, Copy, FileText, Github, Linkedin, Mail } from 'lucide-react';
 import { Lang, PROFILE, UI_COPY } from '../data/portfolio';
+import { THEME_PRESETS, ThemePreset } from '../utils/preferences';
 import { cyberAudio } from '../utils/sound';
+import { QrMatrixSvg } from './QrMatrixSvg';
 
 interface ConnectFooterProps {
   lang: Lang;
+  theme: ThemePreset;
+  onOpenResume: () => void;
 }
 
-function HypercubeCanvas() {
+function HypercubeCanvas({ theme }: { theme: ThemePreset }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const themeRef = useRef<ThemePreset>(theme);
+
+  useEffect(() => {
+    themeRef.current = theme;
+  }, [theme]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -20,7 +29,6 @@ function HypercubeCanvas() {
     let animId = 0;
     let t = 0.35;
 
-    // 16 vertices of a 4D hypercube (tesseract)
     const vertices: [number, number, number, number][] = [];
     for (let i = 0; i < 16; i++) {
       vertices.push([
@@ -50,14 +58,14 @@ function HypercubeCanvas() {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
 
+      const tokens = THEME_PRESETS[themeRef.current];
       ctx.clearRect(0, 0, size, size);
       const cx = size / 2;
       const cy = size / 2;
 
-      // Cobalt core glow
       const grad = ctx.createRadialGradient(cx, cy, 4, cx, cy, 96);
-      grad.addColorStop(0, 'rgba(29, 53, 255, 0.65)');
-      grad.addColorStop(0.55, 'rgba(109, 40, 217, 0.22)');
+      grad.addColorStop(0, `rgba(${tokens.secondaryRgb}, 0.42)`);
+      grad.addColorStop(0.55, `rgba(${tokens.primaryRgb}, 0.14)`);
       grad.addColorStop(1, 'rgba(6, 7, 10, 0)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, size, size);
@@ -68,7 +76,6 @@ function HypercubeCanvas() {
       const sinB = Math.sin(t * 0.7);
 
       const projected = vertices.map(([x, y, z, w]) => {
-        // Rotate XW + YZ
         const x1 = x * cosA - w * sinA;
         const w1 = x * sinA + w * cosA;
         const y1 = y * cosB - z * sinB;
@@ -91,7 +98,9 @@ function HypercubeCanvas() {
         const p1 = projected[a];
         const p2 = projected[b];
         ctx.strokeStyle =
-          idx % 4 === 0 ? 'rgba(204, 255, 0, 0.75)' : 'rgba(0, 240, 255, 0.52)';
+          idx % 4 === 0
+            ? `rgba(${tokens.primaryRgb}, 0.8)`
+            : `rgba(${tokens.secondaryRgb}, 0.56)`;
         ctx.lineWidth = idx % 4 === 0 ? 1.4 : 1;
         ctx.beginPath();
         ctx.moveTo(p1.sx, p1.sy);
@@ -100,7 +109,7 @@ function HypercubeCanvas() {
       });
 
       projected.forEach((p, idx) => {
-        ctx.fillStyle = idx % 2 === 0 ? '#CCFF00' : '#00F0FF';
+        ctx.fillStyle = idx % 2 === 0 ? tokens.primary : tokens.secondary;
         ctx.fillRect(p.sx - 2, p.sy - 2, 4, 4);
       });
 
@@ -125,8 +134,20 @@ function HypercubeCanvas() {
   );
 }
 
-export function ConnectFooter({ lang }: ConnectFooterProps) {
+export function ConnectFooter({ lang, theme, onOpenResume }: ConnectFooterProps) {
   const header = UI_COPY.connectHeader;
+  const [emailCopied, setEmailCopied] = useState(false);
+
+  const handleCopyEmail = async () => {
+    cyberAudio.playClickBlip();
+    try {
+      await navigator.clipboard.writeText(PROFILE.email);
+      setEmailCopied(true);
+      window.setTimeout(() => setEmailCopied(false), 2500);
+    } catch {
+      window.location.href = `mailto:${PROFILE.email}`;
+    }
+  };
 
   return (
     <footer id="connect">
@@ -158,9 +179,9 @@ export function ConnectFooter({ lang }: ConnectFooterProps) {
           </div>
         </div>
 
-        {/* Center: Rotating 4D Cobalt/Volt Hypercube */}
+        {/* Center: Rotating 4D Tesseract synced to theme */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-          <HypercubeCanvas />
+          <HypercubeCanvas theme={theme} />
           <span
             style={{
               fontFamily: 'var(--font-mono)',
@@ -169,12 +190,12 @@ export function ConnectFooter({ lang }: ConnectFooterProps) {
               color: 'var(--ink-muted)',
             }}
           >
-            4D_TESSERACT // LIVE_NODE
+            4D_TESSERACT // {PROFILE.coordinates.node}
           </span>
         </div>
 
-        {/* Right: Contact Channels + HUD Matrix Badge */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {/* Right: Contact Channels, Copy Email, ATS CV & Real Scannable QR Card */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <a
             href={PROFILE.githubUrl}
             target="_blank"
@@ -190,55 +211,84 @@ export function ConnectFooter({ lang }: ConnectFooterProps) {
             <ArrowUpRight size={15} />
           </a>
 
-          <a
-            href={`mailto:${PROFILE.email}`}
-            className="ghost-cta"
-            style={{ justifyContent: 'space-between', width: '100%' }}
-            onMouseEnter={() => cyberAudio.playHoverTick()}
-          >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
-              <Mail size={16} style={{ color: 'var(--accent-cyan)' }} />
-              {PROFILE.email}
-            </span>
-            <ArrowUpRight size={15} />
-          </a>
+          <div className="email-action-row">
+            <a
+              href={`mailto:${PROFILE.email}`}
+              className="ghost-cta"
+              style={{ flex: 1, justifyContent: 'space-between', minWidth: 0 }}
+              onMouseEnter={() => cyberAudio.playHoverTick()}
+            >
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <Mail size={16} style={{ color: 'var(--accent-cyan)', flexShrink: 0 }} />
+                {PROFILE.email}
+              </span>
+              <ArrowUpRight size={15} style={{ flexShrink: 0 }} />
+            </a>
 
-          <a
-            href={PROFILE.linkedinUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="ghost-cta"
+            <button
+              type="button"
+              className={`copy-email-btn chamfer-btn ${emailCopied ? 'copied' : ''}`}
+              onClick={() => void handleCopyEmail()}
+              aria-label="Copy email address"
+            >
+              {emailCopied ? <Check size={14} /> : <Copy size={14} />}
+              <span>{emailCopied ? 'COPIED' : 'COPY'}</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="volt-cta"
             style={{ justifyContent: 'space-between', width: '100%' }}
+            onClick={() => {
+              cyberAudio.playClickBlip();
+              onOpenResume();
+            }}
             onMouseEnter={() => cyberAudio.playHoverTick()}
           >
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
-              <Linkedin size={16} style={{ color: 'var(--accent-volt)' }} />
-              linkedin.com/in/andiakbararyaputra
+              <FileText size={16} />
+              {UI_COPY.hero.cvCta[lang]}
             </span>
             <ArrowUpRight size={15} />
-          </a>
+          </button>
 
           <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 14px',
-              background: 'var(--accent-volt)',
-              color: '#06070a',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              letterSpacing: '0.08em',
-            }}
+            className="passive-channel-badge"
+            aria-label="LinkedIn status pending"
           >
-            <span>{header.qrLabel[lang]}</span>
-            <span>{PROFILE.brandCode}2026</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+              <Linkedin size={16} style={{ opacity: 0.5 }} />
+              <span>{PROFILE.linkedinLabel[lang]}</span>
+            </span>
+            <span className="passive-status-tag">PENDING</span>
+          </div>
+
+          <div className="qr-card">
+            <QrMatrixSvg size={88} />
+            <div className="qr-card-meta">
+              <div className="qr-card-label">{header.qrLabel[lang]}</div>
+              <div className="qr-card-sub">
+                {lang === 'id'
+                  ? 'Arahkan kamera ponsel untuk membuka profil GitHub.'
+                  : 'Scan with phone camera to open GitHub profile.'}
+              </div>
+              <div className="qr-card-code">{PROFILE.brandCode}2026</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Acid-Volt Hazard Caution Strip */}
+      {/* Bottom Hazard Caution Strip */}
       <div
         className="hazard-stripes"
         style={{
@@ -252,7 +302,7 @@ export function ConnectFooter({ lang }: ConnectFooterProps) {
         <div
           style={{
             background: '#06070a',
-            border: '1px solid rgba(204,255,0,0.45)',
+            border: '1px solid var(--grid-line-bright)',
             padding: '6px 18px',
             fontFamily: 'var(--font-mono)',
             fontSize: '0.76rem',

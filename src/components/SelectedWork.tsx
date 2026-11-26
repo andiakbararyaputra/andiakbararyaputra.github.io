@@ -1,55 +1,77 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
-import { ArrowUpRight, ExternalLink, Plus, X } from 'lucide-react';
+import { ArrowUpRight, Download, Plus, RotateCcw, Search, X } from 'lucide-react';
 import { Lang, PROJECTS, ProjectGroup, ProjectItem, UI_COPY } from '../data/portfolio';
 import { cyberAudio } from '../utils/sound';
+import { ProjectModal } from './ProjectModal';
 
 interface SelectedWorkProps {
   lang: Lang;
+  activeProject: ProjectItem | null;
+  onSelectProject: (project: ProjectItem | null) => void;
 }
 
 const FILTER_ORDER: ProjectGroup[] = ['all', 'web-ai', 'systems-mobile', 'data-algo'];
+const QUICK_TECH_CHIPS = ['All', 'TypeScript', 'Python', 'Flutter', 'Tauri v2', 'Java', 'PWA'];
 
-export function SelectedWork({ lang }: SelectedWorkProps) {
+export function SelectedWork({
+  lang,
+  activeProject,
+  onSelectProject,
+}: SelectedWorkProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const [activeGroup, setActiveGroup] = useState<ProjectGroup>('all');
-  const [activeProject, setActiveProject] = useState<ProjectItem | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTech, setActiveTech] = useState('All');
   const header = UI_COPY.workHeader;
 
-  const flagships = PROJECTS.filter((p) => p.featured);
-  const filteredProjects =
-    activeGroup === 'all'
-      ? PROJECTS
-      : PROJECTS.filter((p) => p.group === activeGroup);
+  const flagships = useMemo(() => PROJECTS.filter((p) => p.featured), []);
+  const archiveBase = useMemo(() => PROJECTS.filter((p) => !p.featured), []);
 
   const countForGroup = (g: ProjectGroup) =>
-    g === 'all' ? PROJECTS.length : PROJECTS.filter((p) => p.group === g).length;
+    g === 'all' ? archiveBase.length : archiveBase.filter((p) => p.group === g).length;
 
-  useEffect(() => {
-    if (!activeProject) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setActiveProject(null);
+  const filteredArchive = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return archiveBase.filter((project) => {
+      if (activeGroup !== 'all' && project.group !== activeGroup) return false;
+
+      if (activeTech !== 'All') {
+        const needle = activeTech.toLowerCase();
+        const stackMatch = project.stack.some((s) => s.toLowerCase().includes(needle));
+        if (!stackMatch) return false;
       }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeProject]);
+
+      if (query) {
+        const haystack = [
+          project.title,
+          project.code,
+          project.category[lang],
+          project.tagline[lang],
+          ...project.stack,
+        ]
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+
+      return true;
+    });
+  }, [archiveBase, activeGroup, activeTech, searchQuery, lang]);
 
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
 
       mm.add('(prefers-reduced-motion: no-preference)', () => {
-        // GTA VI inspired split-screen clip-path reveal + inner media parallax
         gsap.utils.toArray<HTMLElement>('.flagship-card').forEach((card) => {
           gsap.from(card, {
             clipPath: 'inset(6% 0% 6% 0%)',
             opacity: 0,
-            duration: 0.8,
+            duration: 0.75,
             ease: 'power3.out',
             clearProps: 'clipPath,opacity',
             scrollTrigger: {
@@ -84,7 +106,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
     { scope: sectionRef, dependencies: [lang] },
   );
 
-  // Smooth GSAP card entrance & ScrollTrigger refresh on filter switch
+  // Smooth GSAP card entrance and ScrollTrigger refresh when filter changes
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       ScrollTrigger.refresh();
@@ -95,12 +117,12 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
     if (cards && cards.length > 0) {
       gsap.fromTo(
         cards,
-        { y: 16, opacity: 0 },
+        { y: 14, opacity: 0 },
         {
           y: 0,
           opacity: 1,
-          duration: 0.35,
-          stagger: 0.05,
+          duration: 0.3,
+          stagger: 0.04,
           ease: 'power2.out',
           clearProps: 'transform,opacity',
         },
@@ -111,7 +133,14 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
       ScrollTrigger.refresh();
     }, 60);
     return () => window.clearTimeout(timer);
-  }, [activeGroup]);
+  }, [activeGroup, activeTech, searchQuery]);
+
+  const resetArchiveFilters = () => {
+    cyberAudio.playClickBlip();
+    setActiveGroup('all');
+    setActiveTech('All');
+    setSearchQuery('');
+  };
 
   return (
     <section id="work" ref={sectionRef}>
@@ -123,7 +152,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
         <p className="section-subtitle">{header.subtitle[lang]}</p>
       </div>
 
-      {/* Flagship Split Showcase (Top 3 GTA-VI Style Parallax Cards) */}
+      {/* Featured Builds (01-03 Split Parallax Cards, exclusive to top section) */}
       <div className="subbar-label">{header.flagshipTag[lang]}</div>
 
       <div className="flagship-list">
@@ -150,7 +179,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                   <span
                     style={{
                       padding: '3px 9px',
-                      border: '1px solid rgba(0,240,255,0.35)',
+                      border: '1px solid var(--grid-line-bright)',
                       color: 'var(--accent-cyan)',
                       fontSize: '0.68rem',
                     }}
@@ -207,7 +236,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                   className="volt-cta"
                   onClick={() => {
                     cyberAudio.playClickBlip();
-                    setActiveProject(project);
+                    onSelectProject(project);
                   }}
                   onMouseEnter={() => cyberAudio.playHoverTick()}
                 >
@@ -225,14 +254,29 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                   <span>{header.openRepo[lang]}</span>
                   <ArrowUpRight size={15} />
                 </a>
+
+                {project.releaseUrl && (
+                  <a
+                    href={project.releaseUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ghost-cta"
+                    onMouseEnter={() => cyberAudio.playHoverTick()}
+                  >
+                    <Download size={14} style={{ color: 'var(--accent-cyan)' }} />
+                    <span>{project.releaseLabel?.[lang] ?? 'RELEASES'}</span>
+                  </a>
+                )}
               </div>
             </div>
 
             <div className="flagship-media">
               <img
                 src={project.image}
-                alt={`${project.title} — ${project.category[lang]}`}
+                alt={`${project.title}: ${project.category[lang]}`}
                 className="flagship-parallax-img"
+                loading="lazy"
+                decoding="async"
               />
               <div
                 style={{
@@ -249,7 +293,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                   left: '12px',
                   padding: '4px 10px',
                   background: 'rgba(6, 7, 10, 0.84)',
-                  border: '1px solid rgba(204, 255, 0, 0.4)',
+                  border: '1px solid var(--grid-line-bright)',
                   fontFamily: 'var(--font-mono)',
                   fontSize: '0.68rem',
                   color: 'var(--accent-volt)',
@@ -266,7 +310,7 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                     right: '14px',
                     bottom: '14px',
                     width: '142px',
-                    border: '1px solid rgba(204,255,0,0.5)',
+                    border: '1px solid var(--grid-line-bright)',
                     background: '#06070a',
                     overflow: 'hidden',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.65)',
@@ -276,6 +320,8 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
                     src={project.secondaryImage}
                     alt={`${project.title} Desk Clock plugin`}
                     style={{ width: '100%', height: 'auto' }}
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
               )}
@@ -284,319 +330,258 @@ export function SelectedWork({ lang }: SelectedWorkProps) {
         ))}
       </div>
 
-      {/* Interactive Category Filter Bar */}
+      {/* Archive Matrix (04-09, zero duplication with Flagship cards above) */}
       <div className="filter-bar">
-        <span className="filter-bar-label">{header.archiveTag[lang]}</span>
-        <div className="filter-tabs" role="tablist" aria-label="Filter repositories by category">
-          {FILTER_ORDER.map((groupKey) => {
-            const isActive = activeGroup === groupKey;
-            const count = String(countForGroup(groupKey)).padStart(2, '0');
-            return (
-              <button
-                key={groupKey}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`filter-tab chamfer-btn ${isActive ? 'active' : ''}`}
-                onClick={() => {
-                  cyberAudio.playClickBlip();
-                  setActiveGroup(groupKey);
-                }}
-                onMouseEnter={() => cyberAudio.playHoverTick()}
-              >
-                <span>{header.filters[groupKey][lang]}</span>
-                <span className="filter-count">[{count}]</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Filterable 8-Repository Cyber-Brutalist Archive Grid */}
-      <div ref={gridRef} className="projects-grid">
-        {filteredProjects.map((project) => (
-          <article
-            key={project.id}
-            className="project-card hud-crosshair-box"
-            onMouseEnter={() => cyberAudio.playHoverTick()}
-          >
-            <div className="project-thumb-wrap">
-              <img src={project.image} alt={project.title} />
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '12px',
-                  left: '12px',
-                  background: 'rgba(6, 7, 10, 0.9)',
-                  border: '1px solid rgba(204,255,0,0.45)',
-                  padding: '4px 9px',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  color: 'var(--accent-volt)',
-                }}
-              >
-                {project.number} // {project.code}
-              </div>
-            </div>
-
-            <div
-              style={{
-                padding: '18px 20px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                flex: 1,
-                gap: '14px',
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.68rem',
-                    color: 'var(--accent-cyan)',
-                    letterSpacing: '0.08em',
-                    marginBottom: '6px',
-                  }}
-                >
-                  {project.category[lang]}
-                </div>
-                <h3
-                  style={{
-                    margin: '0 0 8px',
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '1.22rem',
-                    fontWeight: 800,
-                  }}
-                >
-                  {project.title}
-                </h3>
-                <p
-                  style={{
-                    margin: 0,
-                    color: 'var(--ink-secondary)',
-                    fontSize: '0.86rem',
-                    lineHeight: 1.55,
-                  }}
-                >
-                  {project.tagline[lang]}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingTop: '12px',
-                  borderTop: '1px solid var(--grid-line)',
-                }}
-              >
+        <div className="filter-bar-top">
+          <span className="filter-bar-label">{header.archiveTag[lang]}</span>
+          <div className="filter-tabs" role="tablist" aria-label="Filter archive repositories by category">
+            {FILTER_ORDER.map((groupKey) => {
+              const isActive = activeGroup === groupKey;
+              const count = String(countForGroup(groupKey)).padStart(2, '0');
+              return (
                 <button
+                  key={groupKey}
                   type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`filter-tab chamfer-btn ${isActive ? 'active' : ''}`}
                   onClick={() => {
                     cyberAudio.playClickBlip();
-                    setActiveProject(project);
+                    setActiveGroup(groupKey);
                   }}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    color: 'var(--accent-volt)',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.74rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
+                  onMouseEnter={() => cyberAudio.playHoverTick()}
                 >
-                  <span>[+] {header.inspectSpecs[lang]}</span>
+                  <span>{header.filters[groupKey][lang]}</span>
+                  <span className="filter-count">[{count}]</span>
                 </button>
-
-                <a
-                  href={project.repoUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={`Open ${project.title} repository`}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: 'var(--ink-primary)',
-                  }}
-                >
-                  <ArrowUpRight size={15} />
-                </a>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
-
-      {/* Interactive HUD Case Study Modal */}
-      {activeProject && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${activeProject.title} technical specifications`}
-          onClick={() => setActiveProject(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 80,
-            background: 'rgba(4, 5, 8, 0.84)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="chamfer-card"
-            style={{
-              maxWidth: '760px',
-              width: '100%',
-              maxHeight: '88vh',
-              overflowY: 'auto',
-              background: '#0b0d13',
-              border: '1px solid rgba(204,255,0,0.5)',
-              boxShadow: '0 28px 90px rgba(0, 0, 0, 0.85)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 22px',
-                borderBottom: '1px solid var(--grid-line)',
-                background: 'rgba(204,255,0,0.06)',
-              }}
-            >
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--accent-volt)' }}>
-                CASE_FILE // {activeProject.number} :: {activeProject.title}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  cyberAudio.playClickBlip();
-                  setActiveProject(null);
-                }}
-                aria-label="Close modal"
-                style={{
-                  background: 'transparent',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  color: 'var(--ink-primary)',
-                  padding: '4px 8px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.72rem',
-                }}
-              >
-                <span>ESC</span>
-                <X size={14} />
-              </button>
-            </div>
-
-            <div style={{ padding: '24px' }}>
-              <div
-                style={{
-                  border: '1px solid var(--grid-line)',
-                  marginBottom: '20px',
-                  overflow: 'hidden',
-                  maxHeight: '320px',
-                }}
-              >
-                <img
-                  src={activeProject.image}
-                  alt={activeProject.title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </div>
-
-              <h3
-                style={{
-                  margin: '0 0 10px',
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '1.8rem',
-                  fontWeight: 800,
-                }}
-              >
-                {activeProject.title}
-              </h3>
-
-              <p style={{ margin: '0 0 18px', color: 'var(--ink-secondary)', lineHeight: 1.65 }}>
-                {activeProject.description[lang]}
-              </p>
-
-              <div
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.74rem',
-                  color: 'var(--accent-cyan)',
-                  letterSpacing: '0.1em',
-                  marginBottom: '10px',
-                }}
-              >
-                // ARCHITECTURE_HIGHLIGHTS
-              </div>
-
-              <ul
-                style={{
-                  margin: '0 0 22px',
-                  paddingLeft: '18px',
-                  color: 'var(--ink-primary)',
-                  lineHeight: 1.7,
-                  fontSize: '0.92rem',
-                }}
-              >
-                {activeProject.highlights[lang].map((item) => (
-                  <li key={item} style={{ marginBottom: '6px' }}>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
-                {activeProject.stack.map((tech) => (
-                  <span key={tech} className="tech-chip">
-                    {tech}
-                  </span>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                <a
-                  href={activeProject.repoUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="volt-cta"
-                >
-                  <span>{header.openRepo[lang]}</span>
-                  <ExternalLink size={15} />
-                </a>
-                <button
-                  type="button"
-                  className="ghost-cta"
-                  onClick={() => setActiveProject(null)}
-                >
-                  <span>CLOSE_FILE</span>
-                </button>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
+
+        <div className="filter-bar-search-row">
+          <div className="work-search-wrap">
+            <Search size={14} className="work-search-icon" aria-hidden="true" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                lang === 'id'
+                  ? 'Cari proyek atau stack (mis. Flutter, Python, Java)...'
+                  : 'Search repo or stack (e.g. Flutter, Python, Java)...'
+              }
+              aria-label={lang === 'id' ? 'Cari repositori' : 'Search archive repositories'}
+              className="work-search-input"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="work-search-clear"
+                aria-label="Clear search query"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <div className="tech-filter-strip" aria-label="Filter by technology">
+            {QUICK_TECH_CHIPS.map((chip) => {
+              const selected = activeTech === chip;
+              return (
+                <button
+                  key={chip}
+                  type="button"
+                  className={`tech-filter-chip ${selected ? 'active' : ''}`}
+                  onClick={() => {
+                    cyberAudio.playClickBlip();
+                    setActiveTech(chip);
+                  }}
+                >
+                  {chip === 'All' ? (lang === 'id' ? 'Semua Tag' : 'All Tags') : chip}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* 6-Repository Cyber-Brutalist Archive Grid (3x2 on desktop) */}
+      {filteredArchive.length === 0 ? (
+        <div className="archive-empty-state">
+          <p>
+            {lang === 'id'
+              ? 'Tidak ada repositori arsip yang cocok dengan filter saat ini.'
+              : 'No archive repositories match the current filter.'}
+          </p>
+          <button type="button" className="ghost-cta" onClick={resetArchiveFilters}>
+            <RotateCcw size={14} />
+            <span>{lang === 'id' ? 'RESET FILTER' : 'RESET FILTERS'}</span>
+          </button>
+        </div>
+      ) : (
+        <div ref={gridRef} className="projects-grid">
+          {filteredArchive.map((project) => (
+            <article
+              key={project.id}
+              className="project-card hud-crosshair-box"
+              onMouseEnter={() => cyberAudio.playHoverTick()}
+            >
+              <div className="project-thumb-wrap">
+                <img
+                  src={project.image}
+                  alt={project.title}
+                  loading="lazy"
+                  decoding="async"
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    background: 'rgba(6, 7, 10, 0.9)',
+                    border: '1px solid var(--grid-line-bright)',
+                    padding: '4px 9px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    color: 'var(--accent-volt)',
+                  }}
+                >
+                  {project.number} // {project.code}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '18px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  flex: 1,
+                  gap: '14px',
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.68rem',
+                      color: 'var(--accent-cyan)',
+                      letterSpacing: '0.08em',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    {project.category[lang]}
+                  </div>
+                  <h3
+                    style={{
+                      margin: '0 0 8px',
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '1.22rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {project.title}
+                  </h3>
+                  <p
+                    style={{
+                      margin: 0,
+                      color: 'var(--ink-secondary)',
+                      fontSize: '0.86rem',
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    {project.tagline[lang]}
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '8px',
+                    paddingTop: '12px',
+                    borderTop: '1px solid var(--grid-line)',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      cyberAudio.playClickBlip();
+                      onSelectProject(project);
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      color: 'var(--accent-volt)',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span>[+] {header.inspectSpecs[lang]}</span>
+                  </button>
+
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    {project.releaseUrl && (
+                      <a
+                        href={project.releaseUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={project.releaseLabel?.[lang] ?? 'Releases'}
+                        aria-label={`Download ${project.title} release`}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          color: 'var(--accent-cyan)',
+                        }}
+                      >
+                        <Download size={14} />
+                      </a>
+                    )}
+                    <a
+                      href={project.repoUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Open ${project.title} repository`}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        color: 'var(--ink-primary)',
+                      }}
+                    >
+                      <ArrowUpRight size={15} />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
       )}
+
+      <ProjectModal
+        project={activeProject}
+        lang={lang}
+        onClose={() => onSelectProject(null)}
+        onSelectProject={onSelectProject}
+      />
     </section>
   );
 }

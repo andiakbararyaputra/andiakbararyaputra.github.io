@@ -35,7 +35,7 @@ export function TelemetryBanner({ lang }: TelemetryBannerProps) {
         });
       });
 
-      // Infinite seamless marquee with scroll-velocity boost
+      // Continuous marquee loop with scroll-velocity boost
       if (marqueeTrackRef.current) {
         const marqueeTween = gsap.to(marqueeTrackRef.current, {
           xPercent: -50,
@@ -118,7 +118,7 @@ export function TelemetryBanner({ lang }: TelemetryBannerProps) {
               letterSpacing: '0.1em',
             }}
           >
-            <span>/04 // TELEMETRY_NOTE</span>
+            <span>/05 // TELEMETRY_NOTE</span>
             <span>● VERIFIED</span>
           </div>
 

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <polygon points="0,0 52,0 64,12 64,64 12,64 0,52" fill="#06070a" />
+  <polygon
+    points="2,2 51,2 62,13 62,62 13,62 2,51"
+    stroke="#ccff00"
+    stroke-width="2"
+    fill="none"
+  />
+  <path
+    d="M11 47L20 17H26L35 47H29.5L27.5 40H18.5L16.5 47H11ZM19.8 35H26.2L23 24L19.8 35Z"
+    fill="#ccff00"
+  />
+  <path
+    d="M32 47L41 17H47L56 47H50.5L48.5 40H39.5L37.5 47H32ZM40.8 35H47.2L44 24L40.8 35Z"
+    fill="#00f0ff"
+  />
+</svg>

@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { cyberAudio } from '../utils/sound';
+import { markBootedInSession } from '../utils/preferences';
 
 interface BootSequenceProps {
   onComplete: () => void;
 }
 
 const BOOT_LOGS = [
-  '[OK] MOUNTING KERNEL // AAAP_OS v2.6.0-cyber',
+  '[OK] MOUNTING KERNEL // AAAP_OS v2.8.0 (NODE_MKS_08)',
   '[OK] SYNCING COMPOSITOR // HYPRLAND_0.57 + NOCTALIA_V5',
   '[OK] INITIALIZING GSAP_SCROLLTRIGGER + CANVAS_RENDERER',
-  '[OK] CALIBRATING ACID_VOLT (#CCFF00) & COBALT_MESH (#1D35FF)',
+  '[OK] LOADING THEME TOKENS + LOCALE PREFERENCES',
   '[OK] HUD INTERFACE READY // ACCESS GRANTED_',
 ];
 
@@ -25,6 +26,7 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
   const dismiss = () => {
     if (doneRef.current) return;
     doneRef.current = true;
+    markBootedInSession();
     cyberAudio.playClickBlip();
 
     if (
@@ -38,7 +40,7 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
     overlayRef.current.style.pointerEvents = 'none';
     gsap.to(overlayRef.current, {
       clipPath: 'inset(0 0 100% 0)',
-      duration: 0.45,
+      duration: 0.35,
       ease: 'power3.inOut',
       onComplete,
     });
@@ -46,6 +48,7 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      markBootedInSession();
       onComplete();
       return;
     }
@@ -53,13 +56,13 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
     const state = { pct: 0 };
     const tl = gsap.timeline({
       onComplete: () => {
-        setTimeout(() => dismiss(), 120);
+        window.setTimeout(() => dismiss(), 80);
       },
     });
 
     tl.to(state, {
       pct: 100,
-      duration: 1.15,
+      duration: 0.82,
       ease: 'power2.inOut',
       onUpdate: () => {
         const val = Math.round(state.pct);
@@ -91,6 +94,7 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
       ref={overlayRef}
       role="dialog"
       aria-label="HUD Boot Sequence"
+      onClick={dismiss}
       style={{
         position: 'fixed',
         inset: 0,
@@ -127,14 +131,17 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
               padding: '4px 10px',
             }}
           >
-            AAAP_KERNEL v2.6
+            AAAP_KERNEL v2.8
           </span>
           <span style={{ color: 'var(--accent-cyan)' }}>// INITIALIZING HUD...</span>
         </div>
 
         <button
           type="button"
-          onClick={dismiss}
+          onClick={(e) => {
+            e.stopPropagation();
+            dismiss();
+          }}
           className="ghost-cta"
           style={{ padding: '7px 14px', fontSize: '0.74rem' }}
         >
@@ -143,6 +150,7 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
       </div>
 
       <div
+        onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth: '720px',
           width: '100%',

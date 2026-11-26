@@ -1,15 +1,22 @@
-import { FormEvent, useRef, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { Terminal } from 'lucide-react';
-import { Lang, STACK_GROUPS, UI_COPY } from '../data/portfolio';
-import { runCyberCommand } from '../utils/commands';
+import { Lang, ProjectItem, STACK_GROUPS, UI_COPY } from '../data/portfolio';
+import { useGithubTelemetry } from '../hooks/useGithubTelemetry';
+import { autocompleteCyberCommand, runCyberCommand } from '../utils/commands';
+import { ThemePreset } from '../utils/preferences';
 import { cyberAudio } from '../utils/sound';
 
 interface SystemStatusProps {
   lang: Lang;
+  theme: ThemePreset;
   soundEnabled: boolean;
   onSetLang: (next: Lang) => void;
+  onSetTheme: (next: ThemePreset) => void;
   onSetSound: (next: boolean) => void;
   onScrollTo: (sectionId: string) => void;
+  onOpenProject: (project: ProjectItem) => void;
+  onOpenResume: () => void;
+  onReboot: () => void;
 }
 
 interface LogEntry {
@@ -17,6 +24,8 @@ interface LogEntry {
   prompt?: string;
   lines: string[];
 }
+
+const SHELL_SHORTCUTS = ['fastfetch', 'open tonal-dots', 'log', 'theme cyan', 'cv', 'help'];
 
 function SegmentedMeter({ filled, variant = 'volt' }: { filled: number; variant?: 'volt' | 'cobalt' }) {
   return (
@@ -33,50 +42,114 @@ function SegmentedMeter({ filled, variant = 'volt' }: { filled: number; variant?
 
 export function SystemStatus({
   lang,
+  theme,
   soundEnabled,
   onSetLang,
+  onSetTheme,
   onSetSound,
   onScrollTo,
+  onOpenProject,
+  onOpenResume,
+  onReboot,
 }: SystemStatusProps) {
   const header = UI_COPY.systemHeader;
+  const telemetry = useGithubTelemetry();
+
   const [input, setInput] = useState('');
+  const [cmdHistory, setCmdHistory] = useState<string[]>([]);
+  const [historyCursor, setHistoryCursor] = useState<number>(-1);
   const [history, setHistory] = useState<LogEntry[]>([
     {
       id: 0,
       lines: [
-        'AAAP_CYBER_NODE v2.6 // Type "help", "whoami", "projects", or "stack"',
+        'AAAP_LINUX_SHELL // Tab: autocomplete | Up/Down: history | Try "fastfetch" or "open tonal-dots"',
       ],
     },
   ]);
-  const outputEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const raw = input.trim();
+  const terminalBodyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (terminalBodyRef.current) {
+      terminalBodyRef.current.scrollTop = terminalBodyRef.current.scrollHeight;
+    }
+  }, [history]);
+
+  const executeShellCommand = (rawInput: string) => {
+    const raw = rawInput.trim();
     if (!raw) return;
 
     cyberAudio.playClickBlip();
+    setCmdHistory((prev) => [...prev.slice(-24), raw]);
+    setHistoryCursor(-1);
+
     const result = runCyberCommand(raw, {
       lang,
+      theme,
+      uptime: telemetry.uptime,
       soundEnabled,
       onSetLang,
+      onSetTheme,
       onSetSound,
       onScrollTo,
+      onOpenProject,
+      onOpenResume,
+      onReboot,
     });
 
     if (result.clear) {
       setHistory([]);
     } else {
       setHistory((prev) => [
-        ...prev.slice(-14),
-        { id: Date.now(), prompt: raw, lines: result.lines },
+        ...prev.slice(-16),
+        { id: Date.now() + Math.random(), prompt: raw, lines: result.lines },
       ]);
     }
     setInput('');
-    window.setTimeout(() => {
-      outputEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 30);
   };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    executeShellCommand(input);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const completed = autocompleteCyberCommand(input);
+      if (completed !== input) {
+        cyberAudio.playTerminalKey();
+        setInput(completed);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowUp') {
+      if (cmdHistory.length === 0) return;
+      e.preventDefault();
+      const nextCursor =
+        historyCursor === -1 ? cmdHistory.length - 1 : Math.max(0, historyCursor - 1);
+      setHistoryCursor(nextCursor);
+      setInput(cmdHistory[nextCursor]);
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      if (historyCursor === -1) return;
+      e.preventDefault();
+      if (historyCursor >= cmdHistory.length - 1) {
+        setHistoryCursor(-1);
+        setInput('');
+      } else {
+        const nextCursor = historyCursor + 1;
+        setHistoryCursor(nextCursor);
+        setInput(cmdHistory[nextCursor]);
+      }
+    }
+  };
+
+  const fpsSegments = Math.min(20, Math.max(2, Math.round((telemetry.fps / 60) * 20)));
+  const repoSegments = Math.min(20, Math.max(4, telemetry.publicRepos));
 
   return (
     <section id="system">
@@ -132,7 +205,7 @@ export function SystemStatus({
           </div>
         </div>
 
-        {/* Right: Segmented System Diagnostics + Inline Cyber Terminal */}
+        {/* Right: Live Telemetry Readout + Full Linux Shell */}
         <div className="diagnostics-panel">
           <div
             className="hud-crosshair-box"
@@ -155,45 +228,60 @@ export function SystemStatus({
               }}
             >
               <span>{header.statusTitle[lang]}</span>
-              <span style={{ color: 'var(--accent-cyan)' }}>HYPRLAND_0.57</span>
+              <span
+                style={{
+                  color: 'var(--accent-cyan)',
+                  border: '1px solid rgba(255,255,255,0.16)',
+                  padding: '2px 8px',
+                  fontSize: '0.68rem',
+                }}
+              >
+                {telemetry.isLive ? 'LIVE_API' : 'CACHED_SPEC'}
+              </span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontFamily: 'var(--font-mono)', fontSize: '0.72rem' }}>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                  <span style={{ color: 'var(--ink-secondary)' }}>CPU_ALLOC</span>
-                  <span style={{ color: 'var(--accent-volt)' }}>73%</span>
+                  <span style={{ color: 'var(--ink-secondary)' }}>RENDER_FPS</span>
+                  <span style={{ color: 'var(--accent-volt)' }}>{telemetry.fps} FPS</span>
                 </div>
-                <SegmentedMeter filled={15} variant="volt" />
+                <SegmentedMeter filled={fpsSegments} variant="volt" />
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                  <span style={{ color: 'var(--ink-secondary)' }}>MEM_STREAM</span>
-                  <span style={{ color: 'var(--accent-cyan)' }}>6.4 GB / 16 GB</span>
+                  <span style={{ color: 'var(--ink-secondary)' }}>GITHUB_NODE</span>
+                  <span style={{ color: 'var(--accent-cyan)' }}>
+                    {telemetry.publicRepos} REPOS · {telemetry.totalStars} STARS · LAST: {telemetry.latestRepo}
+                  </span>
                 </div>
-                <SegmentedMeter filled={11} variant="cobalt" />
+                <SegmentedMeter filled={repoSegments} variant="cobalt" />
               </div>
 
               <div
                 style={{
-                  marginTop: '6px',
+                  marginTop: '4px',
                   padding: '8px 12px',
-                  border: '1px solid rgba(204,255,0,0.38)',
-                  background: 'rgba(204,255,0,0.06)',
+                  border: '1px solid var(--grid-line-bright)',
+                  background: 'var(--accent-volt-dim)',
                   color: 'var(--accent-volt)',
                   display: 'flex',
+                  flexWrap: 'wrap',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  gap: '8px',
                 }}
               >
-                <span>● {header.operational[lang]}</span>
-                <span>UPTIME 99.9%</span>
+                <span>● SESSION_UPTIME {telemetry.uptime}</span>
+                <span>
+                  THEME:{theme.toUpperCase()} · LOCALE:{lang.toUpperCase()}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Live Inline Cyber Terminal */}
+          {/* Interactive Inline Linux Shell */}
           <div
             className="hud-crosshair-box"
             style={{
@@ -201,7 +289,7 @@ export function SystemStatus({
               display: 'flex',
               flexDirection: 'column',
               flex: 1,
-              minHeight: '230px',
+              minHeight: '280px',
             }}
           >
             <div
@@ -218,18 +306,32 @@ export function SystemStatus({
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px' }}>
                 <Terminal size={13} style={{ color: 'var(--accent-volt)' }} />
-                andiakbar@cyber-node:~$
+                andiakbar@node-mks-08:~$
               </span>
-              <span style={{ color: 'var(--ink-muted)' }}>INLINE_SHELL</span>
+              <span style={{ color: 'var(--ink-muted)' }}>FISH // TAB_COMPLETE</span>
+            </div>
+
+            <div className="shell-chips-bar">
+              {SHELL_SHORTCUTS.map((shortcut) => (
+                <button
+                  key={shortcut}
+                  type="button"
+                  className="shell-shortcut-chip"
+                  onClick={() => executeShellCommand(shortcut)}
+                >
+                  $ {shortcut}
+                </button>
+              ))}
             </div>
 
             <div
+              ref={terminalBodyRef}
               style={{
                 padding: '14px',
                 fontFamily: 'var(--font-mono)',
-                fontSize: '0.74rem',
-                lineHeight: 1.6,
-                maxHeight: '180px',
+                fontSize: '0.73rem',
+                lineHeight: 1.55,
+                maxHeight: '210px',
                 overflowY: 'auto',
                 flex: 1,
               }}
@@ -237,7 +339,7 @@ export function SystemStatus({
               {history.map((entry) => (
                 <div key={entry.id} style={{ marginBottom: '10px' }}>
                   {entry.prompt && (
-                    <div style={{ color: 'var(--accent-volt)' }}>
+                    <div style={{ color: 'var(--accent-volt)', fontWeight: 700 }}>
                       $ {entry.prompt}
                     </div>
                   )}
@@ -248,7 +350,6 @@ export function SystemStatus({
                   ))}
                 </div>
               ))}
-              <div ref={outputEndRef} />
             </div>
 
             <form
@@ -272,8 +373,9 @@ export function SystemStatus({
                   cyberAudio.playTerminalKey();
                   setInput(e.target.value);
                 }}
-                placeholder='help | whoami | projects | lang id'
-                aria-label="Inline cyber terminal input"
+                onKeyDown={handleKeyDown}
+                placeholder='fastfetch | open tonal-dots | cat finara | theme cyan | Tab'
+                aria-label="Inline Linux shell input"
                 style={{
                   flex: 1,
                   background: 'transparent',

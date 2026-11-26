@@ -1,9 +1,15 @@
 import { useEffect, useRef } from 'react';
+import { PROFILE } from '../data/portfolio';
+import { THEME_PRESETS, ThemePreset } from '../utils/preferences';
 
 interface Point3D {
   x: number;
   y: number;
   z: number;
+}
+
+interface WireframeCanvasProps {
+  theme: ThemePreset;
 }
 
 function createFibonacciSphere(count: number): Point3D[] {
@@ -22,9 +28,14 @@ function createFibonacciSphere(count: number): Point3D[] {
   return pts;
 }
 
-export function WireframeCanvas() {
+export function WireframeCanvas({ theme }: WireframeCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const coordsTextRef = useRef<HTMLDivElement>(null);
+  const themeRef = useRef<ThemePreset>(theme);
+
+  useEffect(() => {
+    themeRef.current = theme;
+  }, [theme]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -66,10 +77,12 @@ export function WireframeCanvas() {
       const h = canvas.clientHeight;
       ctx.clearRect(0, 0, w, h);
 
+      const tokens = THEME_PRESETS[themeRef.current];
+
       if (!reduced) {
         angleY += 0.0045;
-        pointer.x += (pointer.targetX - pointer.x) * 0.06;
-        pointer.y += (pointer.targetY - pointer.y) * 0.06;
+        pointer.x += (pointer.targetX - pointer.x) * 0.07;
+        pointer.y += (pointer.targetY - pointer.y) * 0.07;
       }
 
       const rotY = angleY + pointer.x;
@@ -97,21 +110,19 @@ export function WireframeCanvas() {
         };
       });
 
-      // Subtle cobalt orbital rings
       ctx.save();
-      ctx.strokeStyle = 'rgba(0, 240, 255, 0.18)';
+      ctx.strokeStyle = `rgba(${tokens.secondaryRgb}, 0.22)`;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.ellipse(cx, cy, scale * 1.08, scale * 0.34, rotX * 0.5, 0, Math.PI * 2);
       ctx.stroke();
 
-      ctx.strokeStyle = 'rgba(204, 255, 0, 0.16)';
+      ctx.strokeStyle = `rgba(${tokens.primaryRgb}, 0.2)`;
       ctx.beginPath();
       ctx.ellipse(cx, cy, scale * 0.94, scale * 0.94, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
 
-      // Connect nearby front-facing wireframe nodes
       for (let i = 0; i < projected.length; i++) {
         const a = projected[i];
         if (a.z < -0.3) continue;
@@ -122,8 +133,11 @@ export function WireframeCanvas() {
           const dy = a.sy - b.sy;
           const dist = Math.hypot(dx, dy);
           if (dist < scale * 0.46) {
-            const alpha = (1 - dist / (scale * 0.46)) * 0.28;
-            ctx.strokeStyle = i % 5 === 0 ? `rgba(204, 255, 0, ${alpha})` : `rgba(29, 53, 255, ${alpha * 1.4})`;
+            const alpha = (1 - dist / (scale * 0.46)) * 0.3;
+            ctx.strokeStyle =
+              i % 5 === 0
+                ? `rgba(${tokens.primaryRgb}, ${alpha})`
+                : `rgba(${tokens.secondaryRgb}, ${alpha * 1.05})`;
             ctx.lineWidth = 0.9;
             ctx.beginPath();
             ctx.moveTo(a.sx, a.sy);
@@ -133,23 +147,24 @@ export function WireframeCanvas() {
         }
       }
 
-      // Draw crisp HUD points
       for (let i = 0; i < projected.length; i++) {
         const p = projected[i];
-        const isVolt = i % 7 === 0;
+        const isPrimary = i % 7 === 0;
         const alpha = Math.max(0.18, (p.z + 1.1) / 2.1);
-        ctx.fillStyle = isVolt
-          ? `rgba(204, 255, 0, ${alpha})`
-          : `rgba(0, 240, 255, ${alpha * 0.78})`;
-        ctx.fillRect(p.sx - 1.5, p.sy - 1.5, isVolt ? 3.5 : 2.2, isVolt ? 3.5 : 2.2);
+        ctx.fillStyle = isPrimary
+          ? `rgba(${tokens.primaryRgb}, ${alpha})`
+          : `rgba(${tokens.secondaryRgb}, ${alpha * 0.8})`;
+        ctx.fillRect(p.sx - 1.5, p.sy - 1.5, isPrimary ? 3.5 : 2.2, isPrimary ? 3.5 : 2.2);
       }
 
       frameCounter++;
       if (frameCounter % 6 === 0 && coordsTextRef.current) {
-        const xVal = (36.1749 + Math.sin(rotY) * 1.25).toFixed(4);
-        const yVal = (-86.7676 + Math.cos(rotX) * 0.85).toFixed(4);
-        const zVal = (46.6827 + Math.sin(rotY + rotX) * 0.65).toFixed(4);
-        coordsTextRef.current.innerHTML = `X_${xVal}<br/>Y_${yVal}<br/>Z_${zVal}`;
+        const latBase = Number(PROFILE.coordinates.lat);
+        const lonBase = Number(PROFILE.coordinates.lon);
+        const latVal = (latBase + Math.sin(rotX) * 0.0042).toFixed(4);
+        const lonVal = (lonBase + Math.cos(rotY) * 0.0042).toFixed(4);
+        const rotVal = ((Math.abs(rotY * 57.2958) % 360)).toFixed(1).padStart(5, '0');
+        coordsTextRef.current.innerHTML = `LAT_${latVal}<br/>LON_${lonVal}<br/>ROT_${rotVal}DEG`;
       }
 
       if (!reduced) {
@@ -186,11 +201,11 @@ export function WireframeCanvas() {
         className="hero-hud-telemetry-box"
         aria-hidden="true"
       >
-        X_36.1749
+        LAT_{PROFILE.coordinates.lat}
         <br />
-        Y_-86.7676
+        LON_{PROFILE.coordinates.lon}
         <br />
-        Z_46.6827
+        ROT_022.9DEG
       </div>
     </>
   );
