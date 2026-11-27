@@ -44,7 +44,7 @@ export function ExperienceLog({ lang }: ExperienceLogProps) {
         },
       });
     },
-    { scope: sectionRef, dependencies: [lang] },
+    { scope: sectionRef, dependencies: [] },
   );
 
   return (

@@ -53,7 +53,22 @@ export function SystemStatus({
   onReboot,
 }: SystemStatusProps) {
   const header = UI_COPY.systemHeader;
-  const telemetry = useGithubTelemetry();
+  const sectionRef = useRef<HTMLElement>(null);
+  const [isSystemVisible, setIsSystemVisible] = useState(false);
+  const telemetry = useGithubTelemetry(isSystemVisible);
+
+  useEffect(() => {
+    const sectionEl = sectionRef.current;
+    if (!sectionEl) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setIsSystemVisible(entries[0]?.isIntersecting ?? false);
+      },
+      { rootMargin: '120px' },
+    );
+    observer.observe(sectionEl);
+    return () => observer.disconnect();
+  }, []);
 
   const [input, setInput] = useState('');
   const [cmdHistory, setCmdHistory] = useState<string[]>([]);
@@ -152,7 +167,7 @@ export function SystemStatus({
   const repoSegments = Math.min(20, Math.max(4, telemetry.publicRepos));
 
   return (
-    <section id="system">
+    <section id="system" ref={sectionRef}>
       <div className="section-header-bar">
         <div>
           <div className="section-index-tag">{header.tag}</div>

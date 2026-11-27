@@ -150,12 +150,15 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    let rafPending = false;
+
     const updateActiveSection = () => {
+      rafPending = false;
       const atBottom =
         window.innerHeight + window.scrollY >=
         document.documentElement.scrollHeight - 40;
       if (atBottom) {
-        setActiveSection('connect');
+        setActiveSection((prev) => (prev === 'connect' ? prev : 'connect'));
         return;
       }
 
@@ -168,13 +171,19 @@ export function App() {
           current = id;
         }
       }
-      setActiveSection(current);
+      setActiveSection((prev) => (prev === current ? prev : current));
+    };
+
+    const onScroll = () => {
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(updateActiveSection);
     };
 
     updateActiveSection();
-    window.addEventListener('scroll', updateActiveSection, { passive: true });
-    return () => window.removeEventListener('scroll', updateActiveSection);
-  }, [booted, lang]);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [booted]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

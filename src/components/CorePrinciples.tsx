@@ -70,7 +70,7 @@ export function CorePrinciples({ lang }: CorePrinciplesProps) {
         },
       });
     },
-    { scope: sectionRef, dependencies: [lang] },
+    { scope: sectionRef, dependencies: [] },
   );
 
   return (

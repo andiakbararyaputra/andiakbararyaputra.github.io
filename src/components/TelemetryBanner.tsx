@@ -62,7 +62,7 @@ export function TelemetryBanner({ lang }: TelemetryBannerProps) {
         });
       }
     },
-    { scope: sectionRef, dependencies: [lang] },
+    { scope: sectionRef, dependencies: [] },
   );
 
   const marqueeText = UI_COPY.telemetryHeader.marquee[lang];

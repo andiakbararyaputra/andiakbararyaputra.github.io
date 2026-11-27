@@ -52,7 +52,7 @@ function readCachedStats(): CachedGithubPayload | null {
   return null;
 }
 
-export function useGithubTelemetry(): GithubTelemetryState {
+export function useGithubTelemetry(measureFps = true): GithubTelemetryState {
   const [ghStats, setGhStats] = useState<CachedGithubPayload>(() => readCachedStats() ?? FALLBACK_STATS);
   const [isLive, setIsLive] = useState<boolean>(() => readCachedStats() !== null);
   const [fps, setFps] = useState<number>(60);
@@ -137,8 +137,9 @@ export function useGithubTelemetry(): GithubTelemetryState {
     };
   }, []);
 
-  // Real client FPS measurement
+  // Real client FPS measurement (active only when section is visible)
   useEffect(() => {
+    if (!measureFps) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setFps(60);
       return;
@@ -162,7 +163,7 @@ export function useGithubTelemetry(): GithubTelemetryState {
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, []);
+  }, [measureFps]);
 
   // Real active session uptime counter
   useEffect(() => {

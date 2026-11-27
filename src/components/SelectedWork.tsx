@@ -23,6 +23,8 @@ export function SelectedWork({
 }: SelectedWorkProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const didFilterMountRef = useRef(false);
+  const didRefreshMountRef = useRef(false);
   const [activeGroup, setActiveGroup] = useState<ProjectGroup>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTech, setActiveTech] = useState('All');
@@ -103,35 +105,43 @@ export function SelectedWork({
 
       return () => mm.revert();
     },
-    { scope: sectionRef, dependencies: [lang] },
+    { scope: sectionRef, dependencies: [] },
   );
 
-  // Smooth GSAP card entrance and ScrollTrigger refresh when filter changes
+  // Animate archive cards only on category/tag tab switch (skip initial mount & typing)
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      ScrollTrigger.refresh();
+    if (!didFilterMountRef.current) {
+      didFilterMountRef.current = true;
       return;
     }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const cards = gridRef.current?.querySelectorAll('.project-card');
     if (cards && cards.length > 0) {
       gsap.fromTo(
         cards,
-        { y: 14, opacity: 0 },
+        { y: 12, opacity: 0 },
         {
           y: 0,
           opacity: 1,
-          duration: 0.3,
-          stagger: 0.04,
+          duration: 0.25,
+          stagger: 0.035,
           ease: 'power2.out',
           clearProps: 'transform,opacity',
         },
       );
     }
+  }, [activeGroup, activeTech]);
 
+  // Debounce ScrollTrigger.refresh on archive filter/search height changes
+  useEffect(() => {
+    if (!didRefreshMountRef.current) {
+      didRefreshMountRef.current = true;
+      return;
+    }
     const timer = window.setTimeout(() => {
       ScrollTrigger.refresh();
-    }, 60);
+    }, 180);
     return () => window.clearTimeout(timer);
   }, [activeGroup, activeTech, searchQuery]);
 

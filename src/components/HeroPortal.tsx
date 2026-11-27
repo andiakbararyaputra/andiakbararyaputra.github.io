@@ -43,9 +43,10 @@ export function HeroPortal({
             scrollTrigger: {
               trigger: pinRef.current,
               start: 'top 62px',
-              end: '+=80%',
+              end: '+=55%',
               pin: true,
-              scrub: 0.55,
+              scrub: 0.35,
+              fastScrollEnd: true,
               anticipatePin: 1,
               invalidateOnRefresh: true,
               onUpdate: (self) => {
@@ -59,9 +60,10 @@ export function HeroPortal({
           tl.to(
             layerOneRef.current,
             {
-              scale: 0.88,
+              scale: 0.9,
               yPercent: -4,
               autoAlpha: 0,
+              force3D: true,
               ease: 'none',
             },
             0,
@@ -69,8 +71,9 @@ export function HeroPortal({
             .to(
               cobaltGlowRef.current,
               {
-                scale: 1.3,
-                opacity: 0.85,
+                scale: 1.25,
+                opacity: 0.8,
+                force3D: true,
                 ease: 'none',
               },
               0,
@@ -79,13 +82,15 @@ export function HeroPortal({
               layerTwoRef.current,
               {
                 autoAlpha: 0,
-                scale: 1.05,
+                scale: 1.04,
                 pointerEvents: 'none',
+                force3D: true,
               },
               {
                 autoAlpha: 1,
                 scale: 1,
                 pointerEvents: 'auto',
+                force3D: true,
                 ease: 'power2.out',
               },
               0.38,
@@ -95,7 +100,7 @@ export function HeroPortal({
 
       return () => mm.revert();
     },
-    { scope: pinRef, dependencies: [lang] },
+    { scope: pinRef, dependencies: [] },
   );
 
   return (
@@ -105,7 +110,7 @@ export function HeroPortal({
       {/* STAGE 1: Hero Composition */}
       <div ref={layerOneRef} className="hero-layer-one">
         <div className="hero-left-col">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
               <div className="hero-status-pill chamfer-pill">
                 <span className="pulse-dot" />
@@ -184,8 +189,8 @@ export function HeroPortal({
           <div className="hero-stamp-wrap">
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
               <svg
-                width="68"
-                height="68"
+                width="54"
+                height="54"
                 viewBox="0 0 100 100"
                 className="circular-stamp"
                 aria-hidden="true"

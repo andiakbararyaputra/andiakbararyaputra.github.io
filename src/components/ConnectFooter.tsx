@@ -14,9 +14,11 @@ interface ConnectFooterProps {
 function HypercubeCanvas({ theme }: { theme: ThemePreset }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const themeRef = useRef<ThemePreset>(theme);
+  const redrawRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     themeRef.current = theme;
+    redrawRef.current?.();
   }, [theme]);
 
   useEffect(() => {
@@ -27,6 +29,8 @@ function HypercubeCanvas({ theme }: { theme: ThemePreset }) {
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let animId = 0;
+    let isVisible = false;
+    let isTabVisible = !document.hidden;
     let t = 0.35;
 
     const vertices: [number, number, number, number][] = [];
@@ -49,7 +53,7 @@ function HypercubeCanvas({ theme }: { theme: ThemePreset }) {
       }
     }
 
-    const draw = () => {
+    const drawFrame = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const size = 230;
       if (canvas.width !== size * dpr) {
@@ -90,37 +94,84 @@ function HypercubeCanvas({ theme }: { theme: ThemePreset }) {
         return {
           sx: cx + x3 * zProj * 46,
           sy: cy + y3 * zProj * 46,
-          w: w1,
         };
       });
 
+      // Batch primary and secondary edges into two stroke passes
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = `rgba(${tokens.primaryRgb}, 0.8)`;
+      ctx.beginPath();
       edges.forEach(([a, b], idx) => {
-        const p1 = projected[a];
-        const p2 = projected[b];
-        ctx.strokeStyle =
-          idx % 4 === 0
-            ? `rgba(${tokens.primaryRgb}, 0.8)`
-            : `rgba(${tokens.secondaryRgb}, 0.56)`;
-        ctx.lineWidth = idx % 4 === 0 ? 1.4 : 1;
-        ctx.beginPath();
-        ctx.moveTo(p1.sx, p1.sy);
-        ctx.lineTo(p2.sx, p2.sy);
-        ctx.stroke();
+        if (idx % 4 !== 0) return;
+        ctx.moveTo(projected[a].sx, projected[a].sy);
+        ctx.lineTo(projected[b].sx, projected[b].sy);
       });
+      ctx.stroke();
+
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = `rgba(${tokens.secondaryRgb}, 0.56)`;
+      ctx.beginPath();
+      edges.forEach(([a, b], idx) => {
+        if (idx % 4 === 0) return;
+        ctx.moveTo(projected[a].sx, projected[a].sy);
+        ctx.lineTo(projected[b].sx, projected[b].sy);
+      });
+      ctx.stroke();
 
       projected.forEach((p, idx) => {
         ctx.fillStyle = idx % 2 === 0 ? tokens.primary : tokens.secondary;
         ctx.fillRect(p.sx - 2, p.sy - 2, 4, 4);
       });
+    };
 
-      if (!reduced) {
-        t += 0.012;
-        animId = requestAnimationFrame(draw);
+    const tick = () => {
+      if (!isVisible || !isTabVisible || reduced) {
+        animId = 0;
+        return;
+      }
+      t += 0.012;
+      drawFrame();
+      animId = requestAnimationFrame(tick);
+    };
+
+    const syncAnimation = () => {
+      if (!reduced && isVisible && isTabVisible) {
+        if (!animId) {
+          animId = requestAnimationFrame(tick);
+        }
+      } else if (animId) {
+        cancelAnimationFrame(animId);
+        animId = 0;
       }
     };
 
-    draw();
-    return () => cancelAnimationFrame(animId);
+    redrawRef.current = () => {
+      if (!animId) drawFrame();
+    };
+
+    const handleVisibility = () => {
+      isTabVisible = !document.hidden;
+      syncAnimation();
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        isVisible = entries[0]?.isIntersecting ?? false;
+        syncAnimation();
+      },
+      { rootMargin: '120px' },
+    );
+
+    drawFrame();
+    observer.observe(canvas);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      redrawRef.current = null;
+      if (animId) cancelAnimationFrame(animId);
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   return (
